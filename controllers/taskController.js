@@ -51,14 +51,25 @@ exports.createTask = async (req, res) => {
 // Get tasks with URL-based filtering
 exports.getTasks = async (req, res) => {
   try {
+     console.log("Query received:", req.query);
+     console.log("User from auth middleware:", req.user?._id);
     const { owner, team, project, status, tags } = req.query;
 
     const filter = {};
-    if (owner && mongoose.Types.ObjectId.isValid(owner)) filter.owners = owner;
+     if (owner) {
+      console.log("Owner param received:", owner); // 👈 Debug this specifically
+      if (mongoose.Types.ObjectId.isValid(owner)) {
+        filter.owners = owner;
+      } else {
+        console.warn("⚠️ Invalid owner ObjectId:", owner);
+      }
+    }
     if (team && mongoose.Types.ObjectId.isValid(team)) filter.team = team;
     if (project && mongoose.Types.ObjectId.isValid(project)) filter.project = project;
     if (status) filter.status = status;
     if (tags) filter.tags = { $in: tags.split(",") };
+
+     console.log("Filter built:", filter); 
 
     const tasks = await Task.find(filter)
       .populate("project", "name")
