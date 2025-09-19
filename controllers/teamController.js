@@ -33,6 +33,21 @@ exports.getTeams = async (req, res) => {
   }
 };
 
+exports.getTeamById = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const team = await Team.findById(teamId).populate("members", "name email");
+
+    if (!team) {
+      return res.status(404).json({ error: "Team not found" });
+    }
+
+    res.json(team);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch team" });
+  }
+};  
+
 // --- Update team members (add/remove) ---
 exports.updateTeamMembers = async (req, res) => {
   const { teamId } = req.params;
