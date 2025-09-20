@@ -48,31 +48,21 @@ exports.getTeamById = async (req, res) => {
   }
 };  
 
-// --- Update team members (add/remove) ---
+
 exports.updateTeamMembers = async (req, res) => {
   const { teamId } = req.params;
-  const { addMembers = [], removeMembers = [] } = req.body;
+  const { members = [] } = req.body; // final list of member IDs
 
   try {
-    const team = await Team.findById(teamId);
+    const team = await Team.findByIdAndUpdate(
+      teamId,
+      { members },
+      { new: true }
+    ).populate("members", "name email");
+
     if (!team) {
       return res.status(404).json({ error: "Team not found" });
     }
-
-    // Add members (no duplicates)
-    team.members = [
-      ...new Set([...team.members.map(m => m.toString()), ...addMembers])
-    ];
-
-    // Remove members
-    if (removeMembers.length > 0) {
-      team.members = team.members.filter(
-        memberId => !removeMembers.includes(memberId.toString())
-      );
-    }
-
-    await team.save();
-    await team.populate("members", "name email");
 
     res.json({ message: "Team updated successfully", team });
   } catch (err) {
