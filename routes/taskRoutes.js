@@ -3,6 +3,7 @@ const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const { createTask, getTasks, updateTask, deleteTask, getTaskById } = require("../controllers/taskController");
 const { createTaskValidator, updateTaskValidator } = require("../middleware/taskValidator");
+const {validateRequest} = require("../middleware/validateRequest")
 
 
 // Create Task
