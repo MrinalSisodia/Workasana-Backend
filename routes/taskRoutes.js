@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
-const { createTask, getTasks, updateTask, deleteTask } = require("../controllers/taskController");
-const { createTaskValidator, updateTaskValidator } = require("../middlewares/taskValidator");
+const { createTask, getTasks, updateTask, deleteTask, getTaskById } = require("../controllers/taskController");
+const { createTaskValidator, updateTaskValidator } = require("../middleware/taskValidator");
 
 
 // Create Task
@@ -10,6 +10,8 @@ router.post("/", authMiddleware, createTaskValidator, validateRequest, createTas
 
 // Get Tasks (no body validation needed)
 router.get("/", authMiddleware, getTasks);
+
+router.get("/:id", authMiddleware, getTaskById);
 
 // Update Task
 router.put("/:id", authMiddleware, updateTaskValidator, validateRequest, updateTask);

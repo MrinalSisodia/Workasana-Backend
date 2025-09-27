@@ -104,6 +104,26 @@ exports.updateTask = async (req, res) => {
   }
 };
 
+
+
+exports.getTaskById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid Task ID" });
+    const task = await Task.findById(id)
+      .populate("project", "name")
+      .populate("team", "name")
+      .populate("owners", "name email")
+      .lean();
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    res.json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+
 // --- Delete Task ---
 exports.deleteTask = async (req, res) => {
   try {
