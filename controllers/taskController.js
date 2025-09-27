@@ -1,40 +1,32 @@
 const mongoose = require("mongoose");
 const Task = require("../models/Task.model");
 
-// Create a new task
+// --- Allowed fields for update ---
+const allowedUpdateFields = [
+  "name",
+  "project",
+  "team",
+  "owners",
+  "tags",
+  "timeToComplete",
+  "status",
+  "priority",
+  "dueDate",
+];
+
+// --- Create Task ---
 exports.createTask = async (req, res) => {
   try {
     const { name, project, team, owners, tags, timeToComplete, status } = req.body;
 
-    // Validation
-    if (!name || !project || !team || !owners || owners.length === 0 || !timeToComplete) {
-      return res.status(400).json({ error: "Please provide all required fields" });
-    }
-    if (!mongoose.Types.ObjectId.isValid(project)) {
-      return res.status(400).json({ error: "Invalid Project ID" });
-    }
-    if (!mongoose.Types.ObjectId.isValid(team)) {
-      return res.status(400).json({ error: "Invalid Team ID" });
-    }
-    for (const ownerId of owners) {
-      if (!mongoose.Types.ObjectId.isValid(ownerId)) {
-        return res.status(400).json({ error: `Invalid Owner ID: ${ownerId}` });
-      }
-    }
-
     const newTask = new Task({
-      name,
-      project,
-      team,
-      owners,
+      ...req.body,
       tags: tags || [],
-      timeToComplete,
       status: status || "To Do",
     });
 
     const savedTask = await newTask.save();
 
-    // Manual population for create endpoint
     const taskForResponse = await Task.findById(savedTask._id)
       .populate("project", "name")
       .populate("team", "name")
@@ -48,28 +40,21 @@ exports.createTask = async (req, res) => {
   }
 };
 
-// Get tasks with URL-based filtering
+// --- Get Tasks with filtering ---
 exports.getTasks = async (req, res) => {
   try {
-     console.log("Query received:", req.query);
-     console.log("User from auth middleware:", req.user?._id);
-    const { owner, team, project, status, tags } = req.query;
+    const { owner, team, project, status, tags, dueBefore, dueAfter } = req.query;
 
     const filter = {};
-     if (owner) {
-      console.log("Owner param received:", owner); // 👈 Debug this specifically
-      if (mongoose.Types.ObjectId.isValid(owner)) {
-        filter.owners = owner;
-      } else {
-        console.warn("⚠️ Invalid owner ObjectId:", owner);
-      }
-    }
+
+    if (owner && mongoose.Types.ObjectId.isValid(owner)) filter.owners = owner;
     if (team && mongoose.Types.ObjectId.isValid(team)) filter.team = team;
     if (project && mongoose.Types.ObjectId.isValid(project)) filter.project = project;
-    if (status) filter.status = status;
+    if (status) filter.status = { $in: status.split(",") };
     if (tags) filter.tags = { $in: tags.split(",") };
-
-     console.log("Filter built:", filter); 
+    if (dueBefore || dueAfter) filter.dueDate = {};
+    if (dueBefore) filter.dueDate.$lte = new Date(dueBefore);
+    if (dueAfter) filter.dueDate.$gte = new Date(dueAfter);
 
     const tasks = await Task.find(filter)
       .populate("project", "name")
@@ -84,7 +69,7 @@ exports.getTasks = async (req, res) => {
   }
 };
 
-// Update a task
+// --- Update Task ---
 exports.updateTask = async (req, res) => {
   try {
     const { id } = req.params;
@@ -93,40 +78,33 @@ exports.updateTask = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: "Invalid Task ID" });
     }
-    if (updates.project && !mongoose.Types.ObjectId.isValid(updates.project)) {
-      return res.status(400).json({ error: "Invalid Project ID" });
-    }
-    if (updates.team && !mongoose.Types.ObjectId.isValid(updates.team)) {
-      return res.status(400).json({ error: "Invalid Team ID" });
-    }
-    if (updates.owners) {
-      for (const ownerId of updates.owners) {
-        if (!mongoose.Types.ObjectId.isValid(ownerId)) {
-          return res.status(400).json({ error: `Invalid Owner ID: ${ownerId}` });
-        }
+
+    const task = await Task.findById(id);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+
+    // Only update allowed fields
+    Object.keys(updates).forEach((key) => {
+      if (allowedUpdateFields.includes(key)) {
+        task[key] = updates[key];
       }
-    }
+    });
 
-    const updatedTask = await Task.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
+    await task.save(); 
 
-    if (!updatedTask) {
-      return res.status(404).json({ error: "Task not found" });
-    }
-
-    const taskForResponse = await Task.findById(updatedTask._id)
+    const populatedTask = await Task.findById(task._id)
       .populate("project", "name")
       .populate("team", "name")
       .populate("owners", "name email")
       .lean();
 
-    res.json({ message: "Task updated successfully", task: taskForResponse });
+    res.json({ message: "Task updated successfully", task: populatedTask });
   } catch (err) {
     console.error("Error updating task:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
 
-// Delete a task
+// --- Delete Task ---
 exports.deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
@@ -135,10 +113,7 @@ exports.deleteTask = async (req, res) => {
     }
 
     const deletedTask = await Task.findByIdAndDelete(id);
-
-    if (!deletedTask) {
-      return res.status(404).json({ error: "Task not found" });
-    }
+    if (!deletedTask) return res.status(404).json({ error: "Task not found" });
 
     res.json({ message: "Task deleted successfully" });
   } catch (err) {
