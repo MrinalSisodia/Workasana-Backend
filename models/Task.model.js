@@ -8,17 +8,16 @@ const taskSchema = new mongoose.Schema({
  { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true } // Refers to User model (owners)
  ],
  tags: [{ type: String }],
- timeToComplete: { type: Number, required: true },
+   dueDate: { type: Date, required: true }, 
+
  status: {
  type: String,
  enum: ['To Do', 'In Progress', 'Completed', 'Blocked'],
  default: 'To Do'
  },
-  dueDate: { type: Date }, 
+   timeToComplete: { type: Number},
   priority: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Medium' },
- createdAt: { type: Date, default: Date.now },
- updatedAt: { type: Date, default: Date.now }
- });
+ }, { timestamps: true });
 
 taskSchema.pre('save', function (next) {
  this.updatedAt = Date.now();

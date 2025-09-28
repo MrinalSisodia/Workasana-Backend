@@ -20,9 +20,15 @@ exports.createTask = async (req, res) => {
     const { name, project, team, owners, tags, timeToComplete, status } = req.body;
 
     const newTask = new Task({
-      ...req.body,
-      tags: tags || [],
-      status: status || "To Do",
+       name,
+  project,
+  team,
+  owners,
+  tags: tags || [],
+  timeToComplete,
+  status: status || "To Do",
+  priority: priority || "Medium",
+  dueDate,
     });
 
     const savedTask = await newTask.save();

@@ -28,8 +28,7 @@ const createTaskValidator = [
     .withMessage("Each owner must be a valid Mongo ID"),
 
   body("timeToComplete")
-    .notEmpty()
-    .withMessage("Time to complete is required")
+    .optional()
     .isNumeric()
     .withMessage("Time to complete must be a number"),
 
@@ -44,10 +43,12 @@ const createTaskValidator = [
     .withMessage("Invalid priority"),
 
   body("dueDate")
-    .optional()
+    .notEmpty()
+    .withMessage("Due date is required")
     .isISO8601()
     .withMessage("Due date must be a valid date"),
 ];
+
 
 // --- Update Task Validator ---
 const updateTaskValidator = [
