@@ -30,18 +30,25 @@ exports.getProjects = async (req, res) => {
 // Get single project
 exports.getProjectById = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id);
-    if (!project) return res.status(404).json({ error: "Project not found" });
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid project ID format" });
+    }
 
-    // Fetch all tasks associated with this project
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
     const tasks = await Task.find({ project: project._id })
       .populate("owners", "name email")
       .populate("team", "name")
       .lean();
 
-    // Return project + tasks
     res.json({ ...project.toObject(), tasks });
+
   } catch (error) {
+    console.error("Error in getProjectById:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
