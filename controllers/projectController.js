@@ -32,7 +32,15 @@ exports.getProjectById = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ error: "Project not found" });
-    res.json(project);
+
+    // Fetch all tasks associated with this project
+    const tasks = await Task.find({ project: project._id })
+      .populate("owners", "name email")
+      .populate("team", "name")
+      .lean();
+
+    // Return project + tasks
+    res.json({ ...project.toObject(), tasks });
   } catch (error) {
     res.status(500).json({ error: "Server error" });
   }
