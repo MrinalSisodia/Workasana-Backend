@@ -17,7 +17,7 @@ const allowedUpdateFields = [
 // --- Create Task ---
 exports.createTask = async (req, res) => {
   try {
-    const { name, project, team, owners, tags, timeToComplete, status } = req.body;
+    const { name, project, team, owners, tags, timeToComplete, status, priority, dueDate } = req.body;
 
     const newTask = new Task({
        name,
