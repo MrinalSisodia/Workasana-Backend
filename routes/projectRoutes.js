@@ -16,7 +16,7 @@ const router = express.Router();
 router.post("/", authMiddleware, createProjectValidator, validateRequest,createProject);
 router.get("/", authMiddleware, getProjects);
 router.get("/:id", authMiddleware, getProjectById);
-router.put("/:id", authMiddleware, updateProject);
+router.put("/:id", authMiddleware, validateRequest, updateProject);
 router.delete("/:id", authMiddleware, deleteProject);
 
 module.exports = router;
