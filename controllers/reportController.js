@@ -1,7 +1,7 @@
-const Task = require("../models/Task");
-const Team = require("../models/Team");
-const User = require("../models/User");
-const Project = require("../models/Project");
+const Task = require("../models/Task.model");
+const Team = require("../models/Team.model");
+const User = require("../models/User.model");
+const Project = require("../models/Project.model");
 
 // Helper: Get last calendar week's Monday and Sunday
 function getLastWeekRange() {
