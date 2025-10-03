@@ -7,7 +7,7 @@ const Project = require("../models/Project.model");
  * 1️⃣ Tasks completed in last 7 days
  * Returns daily counts for Chart.js
  */
-exports.getTasksCompletedLast7Days = async (req, res) => {
+exports.getTasksClosedLastWeek = async (req, res) => {
   try {
     const days = 7;
     const startDate = new Date();
@@ -72,7 +72,7 @@ exports.getPendingWorkSummary = async (req, res) => {
   }
 };
 
-exports.getTasksCompletedByGroup = async (req, res) => {
+exports.getTasksClosedByGroup = async (req, res) => {
   try {
     const groupBy = req.query.groupBy || "team"; // "team" | "owner" | "project"
 
