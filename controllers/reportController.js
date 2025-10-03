@@ -58,9 +58,14 @@ exports.getPendingWorkSummary = async (req, res) => {
 
     const summary = {};
     tasks.forEach(task => {
-      const projectName = task.project?.name || "Unassigned";
-      const days = task.timeToComplete || 0; // <-- use timeToComplete
-      summary[projectName] = (summary[projectName] || 0) + days;
+       let projectName = "Unassigned";
+
+  if (task.project && typeof task.project === "object" && task.project.name?.trim()) {
+    projectName = task.project.name;
+  }
+
+  const days = Number(task.timeToComplete) || 0;
+  summary[projectName] = (summary[projectName] || 0) + days;
     });
 
     const labels = Object.keys(summary);
