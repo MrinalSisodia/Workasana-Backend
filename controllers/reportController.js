@@ -3,51 +3,42 @@ const Team = require("../models/Team.model");
 const User = require("../models/User.model");
 const Project = require("../models/Project.model");
 
-// Helper: Get last calendar week's Monday and Sunday
-function getLastWeekRange() {
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) - 7); // Monday of last week
-  monday.setHours(0, 0, 0, 0);
-
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-
-  return { monday, sunday };
-}
-
 /**
- * 1️⃣ Tasks closed last calendar week
- * Returns a daily count to feed a Chart.js line/bar chart.
+ * 1️⃣ Tasks completed in last 7 days
+ * Returns daily counts for Chart.js
  */
-exports.getTasksClosedLastWeek = async (req, res) => {
+exports.getTasksCompletedLast7Days = async (req, res) => {
   try {
-    const { monday, sunday } = getLastWeekRange();
+    const days = 7;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - (days - 1));
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
 
     const tasks = await Task.aggregate([
       {
         $match: {
-          status: "closed",
-          closedAt: { $gte: monday, $lte: sunday },
+          status: "Completed",
+          updatedAt: { $gte: startDate, $lte: endDate },
         },
       },
       {
         $group: {
-          _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$closedAt" },
-          },
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$updatedAt" } },
           count: { $sum: 1 },
         },
       },
       { $sort: { _id: 1 } },
     ]);
 
-    // Format data for Chart.js
     const labels = [];
     const data = [];
 
-    for (let d = new Date(monday); d <= sunday; d.setDate(d.getDate() + 1)) {
+    for (let i = 0; i < days; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - (days - 1 - i));
       const dayStr = d.toISOString().split("T")[0];
       const match = tasks.find(t => t._id === dayStr);
       labels.push(dayStr);
@@ -56,96 +47,109 @@ exports.getTasksClosedLastWeek = async (req, res) => {
 
     res.json({ labels, data });
   } catch (err) {
-    console.error("Error in getTasksClosedLastWeek:", err);
-    res.status(500).json({ error: "Failed to fetch weekly closed tasks" });
+    console.error("Error in getTasksCompletedLast7Days:", err);
+    res.status(500).json({ error: "Failed to fetch completed tasks" });
   }
 };
 
 /**
- * 2️⃣ Total days of work pending
- * Returns a bar chart of total estimated time for all open tasks.
+ * 2️⃣ Pending work summary (bar chart)
  */
 exports.getPendingWorkSummary = async (req, res) => {
   try {
-    const tasks = await Task.find({ status: { $ne: "closed" } });
+    const tasks = await Task.find({ status: { $ne: "Completed" } });
 
-    // Group by project for now (you can change grouping logic)
     const summary = {};
     tasks.forEach(task => {
       const projectName = task.project?.name || "Unassigned";
-      const days = task.estimatedDays || 0;
-      summary[projectName] = (summary[projectName] || 0) + days;
+      summary[projectName] = (summary[projectName] || 0) + (task.timeToComplete || 0);
     });
 
-    const labels = Object.keys(summary);
-    const data = Object.values(summary);
-
-    res.json({ labels, data });
+    res.json({ labels: Object.keys(summary), data: Object.values(summary) });
   } catch (err) {
     console.error("Error in getPendingWorkSummary:", err);
     res.status(500).json({ error: "Failed to fetch pending work summary" });
   }
 };
 
-/**
- * 3️⃣ Tasks closed by team / owner / project
- * Useful for pie charts or grouped bar charts.
- */
-exports.getTasksClosedByGroup = async (req, res) => {
+exports.getTasksCompletedByGroup = async (req, res) => {
   try {
     const groupBy = req.query.groupBy || "team"; // "team" | "owner" | "project"
+
     let groupField = "";
+    let fromCollection = "";
+    let asField = "details";
 
     switch (groupBy) {
       case "owner":
         groupField = "$owners";
+        fromCollection = "users";
         break;
       case "project":
         groupField = "$project";
+        fromCollection = "projects";
         break;
       default:
         groupField = "$team";
+        fromCollection = "teams";
         break;
     }
 
     const results = await Task.aggregate([
-      { $match: { status: "closed" } },
-      { $unwind: { path: groupField, preserveNullAndEmptyArrays: true } },
+      { $match: { status: "Completed" } },
+
+      // If grouping by owner, unwind the owners array
+      ...(groupBy === "owner"
+        ? [{ $unwind: { path: "$owners", preserveNullAndEmptyArrays: true } }]
+        : []),
+
+      // Group by the field (_id is the owner/team/project id)
       {
         $group: {
-          _id: groupField,
+          _id: groupBy === "owner" ? "$owners" : groupBy === "project" ? "$project" : "$team",
           count: { $sum: 1 },
+        },
+      },
+
+      // Lookup name from the related collection
+      {
+        $lookup: {
+          from: fromCollection,
+          localField: "_id",
+          foreignField: "_id",
+          as: asField,
+        },
+      },
+      {
+        $addFields: {
+          name: { $arrayElemAt: [`$${asField}.name`, 0] },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          name: {
+            $ifNull: [
+              "$name",
+              groupBy === "owner"
+                ? "Unknown User"
+                : groupBy === "team"
+                ? "Unknown Team"
+                : "Unknown Project",
+            ],
+          },
+          count: 1,
         },
       },
       { $sort: { count: -1 } },
     ]);
 
-    // Lookup names for labels
-    const labels = [];
-    const data = [];
-
-    for (const r of results) {
-      if (!r._id) continue;
-
-      let name;
-      if (groupBy === "team") {
-        const team = await Team.findById(r._id).select("name");
-        name = team?.name || "Unknown Team";
-      } else if (groupBy === "owner") {
-        const user = await User.findById(r._id).select("name");
-        name = user?.name || "Unknown User";
-      } else {
-        const project = await Project.findById(r._id).select("name");
-        name = project?.name || "Unknown Project";
-      }
-
-      labels.push(name);
-      data.push(r.count);
-    }
+    const labels = results.map(r => r.name);
+    const data = results.map(r => r.count);
 
     res.json({ labels, data });
   } catch (err) {
-    console.error("Error in getTasksClosedByGroup:", err);
-    res.status(500).json({ error: "Failed to fetch tasks closed by group" });
+    console.error("Error in getTasksCompletedByGroup:", err);
+    res.status(500).json({ error: "Failed to fetch tasks completed by group" });
   }
 };
