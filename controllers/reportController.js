@@ -52,9 +52,6 @@ exports.getTasksClosedLastWeek = async (req, res) => {
   }
 };
 
-/**
- * 2️⃣ Pending work summary (bar chart)
- */
 exports.getPendingWorkSummary = async (req, res) => {
   try {
     const tasks = await Task.find({ status: { $ne: "Completed" } });
@@ -62,15 +59,20 @@ exports.getPendingWorkSummary = async (req, res) => {
     const summary = {};
     tasks.forEach(task => {
       const projectName = task.project?.name || "Unassigned";
-      summary[projectName] = (summary[projectName] || 0) + (task.timeToComplete || 0);
+      const days = task.timeToComplete || 0; // <-- use timeToComplete
+      summary[projectName] = (summary[projectName] || 0) + days;
     });
 
-    res.json({ labels: Object.keys(summary), data: Object.values(summary) });
+    const labels = Object.keys(summary);
+    const data = Object.values(summary);
+
+    res.json({ labels, data });
   } catch (err) {
     console.error("Error in getPendingWorkSummary:", err);
     res.status(500).json({ error: "Failed to fetch pending work summary" });
   }
 };
+
 
 exports.getTasksClosedByGroup = async (req, res) => {
   try {
