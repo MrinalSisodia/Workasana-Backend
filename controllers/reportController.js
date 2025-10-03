@@ -58,6 +58,7 @@ exports.getPendingWorkSummary = async (req, res) => {
 
     const summary = {};
     tasks.forEach(task => {
+        console.log(task._id, task.project, typeof task.project);
        let projectName = "Unassigned";
 
   if (task.project && typeof task.project === "object" && task.project.name?.trim()) {
