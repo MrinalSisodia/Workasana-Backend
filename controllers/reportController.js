@@ -54,7 +54,8 @@ exports.getTasksClosedLastWeek = async (req, res) => {
 
 exports.getPendingWorkSummary = async (req, res) => {
   try {
-    const tasks = await Task.find({ status: { $ne: "Completed" } });
+    const tasks = await Task.find({ status: { $ne: "Completed" } })
+                        .populate("project", "name");
 
     const summary = {};
     tasks.forEach(task => {
