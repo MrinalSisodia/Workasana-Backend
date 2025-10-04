@@ -10,6 +10,6 @@ router.post("/", authMiddleware,createTeamValidator, validateRequest, createTeam
 router.get("/", authMiddleware, getTeams);   
 router.get("/:teamId", authMiddleware, getTeamById);
 router.put("/:teamId/members", authMiddleware, updateTeamMembersValidator, validateRequest, updateTeamMembers);
-router.delete("/teams/teamId", authMiddleware, deleteTeam);
+router.delete("/teams/:teamId", authMiddleware, deleteTeam);
 
 module.exports = router;
