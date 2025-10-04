@@ -81,7 +81,7 @@ exports.deleteTeam = async(req,res) => {
     const deletedTeam = await Team.findByIdAndDelete(teamId);
     if (!deletedTeam) return res.status(404).json({ error: "Team not found" });
    } catch (error) {
-    res.status(500).json({ error: "Server error" })
+    res.status(500).json({ error: "Server error" }) 
    }
 };
 
