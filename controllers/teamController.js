@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const Team = require("../models/Team.model");
 
 // --- Create new team ---
@@ -70,3 +71,17 @@ exports.updateTeamMembers = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+exports.deleteTeam = async(req,res) => {
+   const { teamId } = req.params;
+   if(!mongoose.Types.ObjectIdisValid(teamId)){
+    return res.status(400).json({ error: "Invalid Team ID" });
+   }
+   try {
+    const deletedTeam = await Team.findByIdAndDelete();
+    if (!deletedTeam) return res.status(404).json({ error: "Task not found" });
+   } catch (error) {
+    res.status(500).json({ error: "Server error" })
+   }
+};
+
