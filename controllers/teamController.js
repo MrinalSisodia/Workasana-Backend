@@ -74,12 +74,12 @@ exports.updateTeamMembers = async (req, res) => {
 
 exports.deleteTeam = async(req,res) => {
    const { teamId } = req.params;
-   if(!mongoose.Types.ObjectIdisValid(teamId)){
+   if(!mongoose.Types.ObjectId.isValid(teamId)){
     return res.status(400).json({ error: "Invalid Team ID" });
    }
    try {
-    const deletedTeam = await Team.findByIdAndDelete();
-    if (!deletedTeam) return res.status(404).json({ error: "Task not found" });
+    const deletedTeam = await Team.findByIdAndDelete(teamId);
+    if (!deletedTeam) return res.status(404).json({ error: "Team not found" });
    } catch (error) {
     res.status(500).json({ error: "Server error" })
    }
